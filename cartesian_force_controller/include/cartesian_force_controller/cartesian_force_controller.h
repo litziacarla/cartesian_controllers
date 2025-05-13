@@ -108,6 +108,8 @@ private:
 
   bool m_filter_initialized;
   ctrl::Vector6D m_ft_sensor_filt_wrench;
+  realtime_tools::RealtimePublisherSharedPtr<geometry_msgs::msg::WrenchStamped> m_ft_sensor_wrench_publisher;
+  realtime_tools::RealtimePublisherSharedPtr<geometry_msgs::msg::WrenchStamped> m_ft_sensor_wrench_filt_publisher;
 
   rclcpp::Subscription<geometry_msgs::msg::WrenchStamped>::SharedPtr m_target_wrench_subscriber;
   rclcpp::Subscription<geometry_msgs::msg::WrenchStamped>::SharedPtr m_ft_sensor_wrench_subscriber;

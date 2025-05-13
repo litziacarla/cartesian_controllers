@@ -89,6 +89,15 @@ CartesianForceController::on_configure(const rclcpp_lifecycle::State & previous_
   // Make sure sensor wrenches are interpreted correctly
   setFtSensorReferenceFrame(Base::m_end_effector_link);
 
+  m_ft_sensor_wrench_publisher =
+  std::make_shared<realtime_tools::RealtimePublisher<geometry_msgs::msg::WrenchStamped>>(
+    get_node()->create_publisher<geometry_msgs::msg::WrenchStamped>(
+      std::string(get_node()->get_name()) + "/wrench", 3));
+  m_ft_sensor_wrench_filt_publisher =
+      std::make_shared<realtime_tools::RealtimePublisher<geometry_msgs::msg::WrenchStamped>>(
+        get_node()->create_publisher<geometry_msgs::msg::WrenchStamped>(
+          std::string(get_node()->get_name()) + "/wrench_filtered", 3));
+
   m_target_wrench_subscriber = get_node()->create_subscription<geometry_msgs::msg::WrenchStamped>(
     get_node()->get_name() + std::string("/target_wrench"), 10,
     std::bind(&CartesianForceController::targetWrenchCallback, this, std::placeholders::_1));
@@ -263,6 +272,35 @@ void CartesianForceController::ftSensorWrenchCallback(
   m_ft_sensor_wrench[3] = m_ft_sensor_filt_wrench[3];
   m_ft_sensor_wrench[4] = m_ft_sensor_filt_wrench[4];
   m_ft_sensor_wrench[5] = m_ft_sensor_filt_wrench[5];
+
+  // Publish
+  auto now = rclcpp::Clock().now();
+  if (m_ft_sensor_wrench_publisher->trylock())
+  {
+    m_ft_sensor_wrench_publisher->msg_.header.stamp = now;
+    m_ft_sensor_wrench_publisher->msg_.header.frame_id = "tool0";
+    m_ft_sensor_wrench_publisher->msg_.wrench.force.x = tmp[0];
+    m_ft_sensor_wrench_publisher->msg_.wrench.force.y = tmp[1];
+    m_ft_sensor_wrench_publisher->msg_.wrench.force.z = tmp[2];
+    m_ft_sensor_wrench_publisher->msg_.wrench.torque.x = tmp[3];
+    m_ft_sensor_wrench_publisher->msg_.wrench.torque.y = tmp[4];
+    m_ft_sensor_wrench_publisher->msg_.wrench.torque.z = tmp[5];
+
+    m_ft_sensor_wrench_publisher->unlockAndPublish();
+  }
+  if (m_ft_sensor_wrench_filt_publisher->trylock())
+  {
+    m_ft_sensor_wrench_filt_publisher->msg_.header.stamp = now;
+    m_ft_sensor_wrench_filt_publisher->msg_.header.frame_id = "tool0";
+    m_ft_sensor_wrench_filt_publisher->msg_.wrench.force.x = m_ft_sensor_filt_wrench[0];
+    m_ft_sensor_wrench_filt_publisher->msg_.wrench.force.y = m_ft_sensor_filt_wrench[1];
+    m_ft_sensor_wrench_filt_publisher->msg_.wrench.force.z = m_ft_sensor_filt_wrench[2];
+    m_ft_sensor_wrench_filt_publisher->msg_.wrench.torque.x = m_ft_sensor_filt_wrench[3];
+    m_ft_sensor_wrench_filt_publisher->msg_.wrench.torque.y = m_ft_sensor_filt_wrench[4];
+    m_ft_sensor_wrench_filt_publisher->msg_.wrench.torque.z = m_ft_sensor_filt_wrench[5];
+
+    m_ft_sensor_wrench_filt_publisher->unlockAndPublish();
+  }
 }
 
 }  // namespace cartesian_force_controller
