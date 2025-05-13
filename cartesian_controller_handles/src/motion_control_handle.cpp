@@ -255,7 +255,7 @@ void MotionControlHandle::updateMarkerMenuCallback(
 void MotionControlHandle::prepareMarkerControls(visualization_msgs::msg::InteractiveMarker & marker)
 {
   // Add colored sphere as visualization
-  constexpr double marker_scale = 0.05;
+  constexpr double marker_scale = 0.07;
   addMarkerVisualization(marker, marker_scale);
 
   // Create move and rotate controls along all axis
