@@ -47,7 +47,7 @@
 namespace cartesian_force_controller
 {
 CartesianForceController::CartesianForceController()
-: Base::CartesianControllerBase(), m_hand_frame_control(true)
+: Base::CartesianControllerBase(), m_hand_frame_control(true), m_filter_initialized(false)
 {
 }
 
@@ -233,12 +233,36 @@ void CartesianForceController::ftSensorWrenchCallback(
   // Compute how the measured wrench appears in the frame of interest.
   tmp = m_ft_sensor_transform * tmp;
 
-  m_ft_sensor_wrench[0] = tmp[0];
-  m_ft_sensor_wrench[1] = tmp[1];
-  m_ft_sensor_wrench[2] = tmp[2];
-  m_ft_sensor_wrench[3] = tmp[3];
-  m_ft_sensor_wrench[4] = tmp[4];
-  m_ft_sensor_wrench[5] = tmp[5];
+  // Add LP filter
+  double m_alpha = 0.1;
+  KDL::Wrench tmp_filt;
+  if (!m_filter_initialized)
+  {
+    m_ft_sensor_filt_wrench[0] = tmp[0];
+    m_ft_sensor_filt_wrench[1] = tmp[1];
+    m_ft_sensor_filt_wrench[2] = tmp[2];
+    m_ft_sensor_filt_wrench[3] = tmp[3];
+    m_ft_sensor_filt_wrench[4] = tmp[4];
+    m_ft_sensor_filt_wrench[5] = tmp[5];
+    m_filter_initialized = true;
+  }
+  else
+  {
+    // Apply LP filter: x[n+1] = alpha*x[n] + (1-alpha)*x[n-1]
+    m_ft_sensor_filt_wrench[0] = m_alpha * tmp[0] + (1 - m_alpha) * m_ft_sensor_filt_wrench[0];
+    m_ft_sensor_filt_wrench[1] = m_alpha * tmp[1] + (1 - m_alpha) * m_ft_sensor_filt_wrench[1];
+    m_ft_sensor_filt_wrench[2] = m_alpha * tmp[2] + (1 - m_alpha) * m_ft_sensor_filt_wrench[2];
+    m_ft_sensor_filt_wrench[3] = m_alpha * tmp[3] + (1 - m_alpha) * m_ft_sensor_filt_wrench[3];
+    m_ft_sensor_filt_wrench[4] = m_alpha * tmp[4] + (1 - m_alpha) * m_ft_sensor_filt_wrench[4];
+    m_ft_sensor_filt_wrench[5] = m_alpha * tmp[5] + (1 - m_alpha) * m_ft_sensor_filt_wrench[5];
+  }
+
+  m_ft_sensor_wrench[0] = m_ft_sensor_filt_wrench[0];
+  m_ft_sensor_wrench[1] = m_ft_sensor_filt_wrench[1];
+  m_ft_sensor_wrench[2] = m_ft_sensor_filt_wrench[2];
+  m_ft_sensor_wrench[3] = m_ft_sensor_filt_wrench[3];
+  m_ft_sensor_wrench[4] = m_ft_sensor_filt_wrench[4];
+  m_ft_sensor_wrench[5] = m_ft_sensor_filt_wrench[5];
 }
 
 }  // namespace cartesian_force_controller
